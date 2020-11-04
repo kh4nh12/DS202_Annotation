@@ -1,0 +1,312 @@
+<html>
+<head>
+    <title>UIT-ABCD Annotation tools</title>
+    <script type="text/javascript"
+            src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link rel="stylesheet" type="text/css"
+          href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"/>
+    <script type="text/javascript"
+            src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script type="text/javascript"
+            src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <h2>Công cụ gán nhãn bộ UIT - *Tên bộ dữ liệu ở đây nè* </h2>
+    <hr>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-sm">
+            <div class="form-group">
+                <label for="comment">Nguồn thu thập:</label>
+                <input type="text" class="form-control" id="title">
+            </div>
+        </div>
+        <div class="col-sm">
+            <div class="form-group">
+                <label for="inputState">Rate: </label>
+                <select id="grade" class="form-control">
+                    <option selected>None</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                </select>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row">
+        <div class="col-sm">
+            <div class="form-group">
+                <label for="comment">Nội dung:</label>
+                <textarea class="form-control" rows="5" id="passage"></textarea>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm answers_group">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label for="inputState">Nhãn: </label>
+                    <select id="grade" class="form-control">
+                        <option selected>None</option>
+                        <option value="1">Tích cực</option>
+                        <option value="2">Trung tính</option>
+                        <option value="3">Tiêu cực</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="btn-group col-md-9" role="group" aria-label="Basic example">
+        <button type="button" class="btn btn-secondary" id="prev">Trước đó</button>
+        <button type="button" class="btn btn-secondary" id="next">Kế tiếp</button>
+        <button type="button" class="btn btn-secondary" id="add">Thêm</button>
+    </div>
+
+    <div class="btn-group" role="group" aria-label="Basic example">
+        <button type="button" class="btn btn-secondary" id="load" onclick="openFile(dispFile)">Load data</button>
+        <button type="button" class="btn btn-secondary" id="export">Export data</button>
+    </div>
+</div>
+</body>
+<label id="ques" hidden></label>
+<label id="ques_index" hidden></label>
+<label id="ques_number" hidden></label>
+</html>
+<script>
+    function saveFile(name, type, data) {
+        if (data != null && navigator.msSaveBlob)
+            return navigator.msSaveBlob(new Blob([data], {type: type}), name);
+        var a = $("<a style='display: none;'/>");
+        var url = window.URL.createObjectURL(new Blob([data], {type: type}));
+        a.attr("href", url);
+        a.attr("download", name);
+        $("body").append(a);
+        a[0].click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+    }
+
+    function dispFile(contents) {
+        {#document.getElementById('contents').innerHTML = contents;#}
+        let data = JSON.parse(contents);
+
+        console.log(data);
+
+        $("#title").val(data['title']);
+        $("#author").val(data['author']);
+        $("#passage").val(data['content']);
+        $("#grade option[value="+data['grade']+"]").attr('selected','selected');
+
+        $("#ques_index").val(0);
+        $("#ques").val(JSON.stringify(data['questions']));
+        $("#ques_number").val(data['questions'].length);
+
+
+        $("#question").val(JSON.parse($("#ques").val())[$("#ques_index").val()]['question']);
+
+        let options = JSON.parse($("#ques").val())[$("#ques_index").val()]['options'];
+
+        for (let i = 0; i < options.length; i++) {
+            $("#option"+(i+1)).val(Object.entries(options[i])[0][1]);
+        }
+
+        $("#right_answer option[value="+JSON.parse($("#ques").val())[$("#ques_index").val()]['answer']+"]").attr('selected','selected');
+
+        let types = JSON.parse($("#ques").val())[$("#ques_index").val()]['types'];
+        for(let i = 0; i < types.length; i++) {
+            $("#rs"+(i+1)).attr('checked', Object.entries(types[i])[0][1]);
+        }
+
+    }
+
+    function clickElem(elem) {
+        // Thx user1601638 on Stack Overflow (6/6/2018 - https://stackoverflow.com/questions/13405129/javascript-create-and-save-file )
+        var eventMouse = document.createEvent("MouseEvents")
+        eventMouse.initMouseEvent("click", true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null)
+        elem.dispatchEvent(eventMouse)
+    }
+
+    function openFile(func) {
+        readFile = function (e) {
+            var file = e.target.files[0];
+            if (!file) {
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var contents = e.target.result;
+                fileInput.func(contents);
+                document.body.removeChild(fileInput)
+            };
+            reader.readAsText(file)
+        };
+        fileInput = document.createElement("input");
+        fileInput.type = 'file';
+        fileInput.style.display = 'none';
+        fileInput.onchange = readFile;
+        fileInput.func = func;
+        document.body.appendChild(fileInput);
+        clickElem(fileInput);
+    }
+
+    $(document).ready(function () {
+        {#let data = [];#}
+
+        $("#export").click(function () {
+            let race_data = {};
+            race_data['author'] = $("#author").val();
+            race_data['grade'] = $("#grade").val();
+            race_data['questions'] = JSON.parse($("#ques").val());
+            race_data['title'] = $("#title").val();
+            race_data['isProse'] = true;
+            race_data['content'] = $("#passage").val();
+
+            console.log(race_data);
+
+            saveFile("mrc_annotated.json", "data:attachment/json", JSON.stringify(race_data));
+
+        });
+
+        $("#next").click(function () {
+            let curr = $("#ques_index").val();
+            curr = parseInt(curr) + 1;
+
+            let ques = $("#ques").val();
+            let ques_number = parseInt($("#ques_number").val());
+
+            console.log(curr);
+
+            if (curr >= ques.length)
+                curr = ques.length - 1;
+
+            if (curr < ques_number) {
+                $("#question").val(JSON.parse(ques)[curr]['question']);
+
+                let options = JSON.parse(ques)[curr]['options'];
+
+                for (let i = 0; i < options.length; i++) {
+                    $("#option"+(i+1)).val(Object.entries(options[i])[0][1]);
+                }
+
+                $("#right_answer").val(JSON.parse(ques)[curr]['answer']);
+                {#$("#right_answer option[value="+JSON.parse(ques)[curr]['answer']+"]").attr('selected','selected');#}
+
+                let types = JSON.parse(ques)[curr]['types'];
+                for(let i = 0; i < types.length; i++) {
+                    if(Object.values(types[i])[0] === true) {
+                        $("#rs"+(i+1)).prop('checked', true);
+                    }
+                    else{
+                        $("#rs"+(i+1)).prop('checked', false);
+                    }
+
+                }
+
+                $("#ques_index").val(curr);
+            }
+            else {
+                $("#question").val("");
+                for (let i = 0; i < 4; i++) {
+                    $("#option"+(i+1)).val("");
+                }
+                $("#right_answer").val('default');
+                console.log(ques_number);
+
+                for(let j = 0; j < 5; j++) {
+                    $("#rs" + (j + 1)).prop('checked', false);
+                }
+            }
+        });
+
+        $("#add").click(function () {
+            let curr_ques;
+            if ($("#ques").val()) {
+                curr_ques = JSON.parse($("#ques").val());
+            }
+            else {
+                curr_ques = []
+            }
+
+            let tmp_q = {};
+            tmp_q['question'] = $("#question").val();
+
+            let tmp_ops = [];
+            tmp_ops.push({'A': $("#option1").val()});
+            tmp_ops.push({'B': $("#option2").val()});
+            tmp_ops.push({'C': $("#option3").val()});
+            tmp_ops.push({'D': $("#option4").val()});
+
+            tmp_q['options'] = tmp_ops;
+            tmp_q['answer'] = $("#right_answer").val();
+
+            let tmp_rs = [];
+            tmp_rs.push({'Matching': $("#rs1").is(':checked')});
+            tmp_rs.push({'Paraphrasing': $("#rs2").is(':checked')});
+            tmp_rs.push({'Single-sentence Reasoning': $("#rs3").is(':checked')});
+            tmp_rs.push({'Multi-sentence Reasoning': $("#rs4").is(':checked')});
+            tmp_rs.push({'Ambiguous Or Insufficient': $("#rs5").is(':checked')});
+
+            curr_ques.push(tmp_q);
+
+            tmp_q['types'] = tmp_rs;
+
+            $("#ques").val(JSON.stringify(curr_ques));
+
+            console.log($("#ques").val());
+            $("#ques_number").val(curr_ques.length);
+            $("#ques_index").val(curr_ques.length);
+
+            alert("Đã thêm");
+            $("#question").val("");
+            for (let i = 0; i < 4; i++) {
+                $("#option" + (i + 1)).val("");
+            }
+            $("#right_answer").val('default');
+            console.log(ques_number);
+            for(let j = 0; j < 5; j++) {
+                $("#rs" + (j + 1)).prop('checked', false);
+            }
+        });
+
+        $("#prev").click(function () {
+            let curr = $("#ques_index").val();
+            curr = parseInt(curr) - 1;
+
+            if (curr < 0) curr = 0;
+
+            let ques = $("#ques").val();
+
+            console.log(curr);
+
+            if (curr >= 0) {
+                $("#question").val(JSON.parse(ques)[curr]['question']);
+
+                let options = JSON.parse(ques)[curr]['options'];
+
+                for (let i = 0; i < options.length; i++) {
+                    $("#option"+(i+1)).val(Object.entries(options[i])[0][1]);
+                }
+
+                $("#right_answer").val(JSON.parse(ques)[curr]['answer']);
+
+                {#$("#right_answer option[value="+JSON.parse(ques)[curr]['answer']+"]").attr('selected','selected');#}
+
+                let types = JSON.parse(ques)[curr]['types'];
+                for(let j = 0; j < types.length; j++) {
+                    if (Object.values(types[j])[0] === true) {
+                        $("#rs"+(j+1)).prop('checked', true);
+                    }
+                    else {
+                        $("#rs"+(j+1)).prop('checked', false);
+                    }
+                }
+
+                $("#ques_index").val(curr);
+            }
+        });
+    });
+</script>
